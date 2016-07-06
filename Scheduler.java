@@ -9,6 +9,15 @@
 // "synchronized" keywords in the code
 // or else deadlock may occur
 
+// THIS IS THE CODE FOR PART 2!!!!
+// Modify the following:
+// --- constructors
+// --- run()
+// --- getMyTcb()
+// --- addThread()
+
+// 
+
 import java.util.*;
 
 public class Scheduler extends Thread
@@ -20,9 +29,11 @@ public class Scheduler extends Thread
     // New data added to p161
     private boolean[] tids; // Indicate which ids have been used
     private static final int DEFAULT_MAX_THREADS = 10000; // tids[] has this many elements
+    
 
     // A new feature added to p161
-    // Allocate an ID array, each element indicating if that id has been used
+    // Allocate an ID array, each 
+    // element indicating if that id has been used
     private int nextId = 0;
     private void initTid( int maxThreads ) 
     {
@@ -35,7 +46,8 @@ public class Scheduler extends Thread
     }
 
     // A new feature added to p161
-    // Search an available thread ID and provide a new thread with this ID
+    // Search an available thread 
+    // ID and provide a new thread with this ID
     private int getNewTid( ) 
     {
         for ( int i = 0; i < tids.length; i++ ) 
@@ -52,7 +64,8 @@ public class Scheduler extends Thread
     }
 
     // A new feature added to p161
-    // Return the thread ID and set the corresponding tids element to be unused
+    // Return the thread ID and set 
+    // the corresponding tids element to be unused
     private boolean returnTid( int tid ) {
         if ( tid >= 0 && tid < tids.length && tids[tid] == true ) 
         {
@@ -62,8 +75,15 @@ public class Scheduler extends Thread
         return false;
     }
 
+    // ********************************************************************
+    // ******************* Modify getMyTcb() For Part 2 ******************
+    // ********************************************************************
+    // This method must look through 
+    // all 3 queues: Q0,Q1,Q2
+    
     // A new feature added to p161
-    // Retrieve the current thread's TCB from the queue
+    // Retrieve the current thread's 
+    // TCB from the queue
     public TCB getMyTcb( ) {
         Thread myThread = Thread.currentThread( ); // Get my thread object
         synchronized( queue ) {
@@ -82,12 +102,16 @@ public class Scheduler extends Thread
     }
 
     // A new feature added to p161
-    // Return the maximal number of threads to be spawned in the system
+    // Return the maximal number of 
+    // threads to be spawned in the system
     public int getMaxThreads( ) 
     {
         return tids.length;
     }
 
+    // ************************************************************************
+    // ******************* Modify Constructor For Part 2 ****************
+    // ************************************************************************
     public Scheduler( ) 
     {
         timeSlice = DEFAULT_TIME_SLICE;
@@ -95,6 +119,9 @@ public class Scheduler extends Thread
         initTid( DEFAULT_MAX_THREADS );
     }
 
+    // ************************************************************************
+    // ******************* Modify Constructor For Part 2 ****************
+    // ************************************************************************
     public Scheduler( int quantum ) 
     {
         timeSlice = quantum;
@@ -102,8 +129,13 @@ public class Scheduler extends Thread
         initTid( DEFAULT_MAX_THREADS );
     }
 
+    // ************************************************************************
+    // ******************* Modify Constructor For Part 2 ****************
+    // ************************************************************************
+    
     // A new feature added to p161
-    // A constructor to receive the max number of threads to be spawned
+    // A constructor to receive the 
+    // max number of threads to be spawned
     public Scheduler( int quantum, int maxThreads ) 
     {
         timeSlice = quantum;
@@ -122,10 +154,15 @@ public class Scheduler extends Thread
         }
     }
 
+    // ************************************************************************
+    // ******************* Modify addThread() For Part 2 ****************
+    // ************************************************************************
+    // Should add thread to Q0
+    
     // A modified addThread of p161 example
     public TCB addThread( Thread t ) 
     {
-        //t.setPriority( 2 );	// ********************************** Removed for part 1
+        //t.setPriority( 2 );	// ********************** Removed for part 1
         TCB parentTcb = getMyTcb( ); // get my TCB and find my TID
         int pid = ( parentTcb != null ) ? parentTcb.getTid( ) : -1;
         int tid = getNewTid( ); // get a new TID
@@ -157,6 +194,27 @@ public class Scheduler extends Thread
         } catch ( InterruptedException e ) { }
     }
 
+    // ************************************************************************
+    // ******************* Modify run() For Part 2 ****************
+    // ************************************************************************
+    // Should implement the following algorithm:
+    // Execute threads in Q0
+    // 		if thread in Q0 doesn't complete
+    // 		in its quantum, move to Q1
+    // If Q0 is empty, execute Q1 threads. 
+    //		if Q1 thread doesn't complete
+    //		in timeslice/2, check Q0 for 
+    // 		threads and execute Q0 threads
+    //		after pausing Q1 thread exec. 
+    //		If Q1 thread doesn't execute
+    // 		in timeslice, move to Q2
+    // If Q0, Q1 are empty, execute Q2 threads
+    // 		after timeslice/2, check Q0,Q1 for
+    //		threads and execute Q0-1 threads
+    //		before resuming Q2 thread exec.
+    //		If Q2 thread doesn't execute in 
+    // 		timeslice*2, move to tail of Q2
+    
     // A modified run of p161
     public void run( ) 
     {
