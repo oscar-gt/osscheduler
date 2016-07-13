@@ -22,9 +22,18 @@ import java.util.*;
 
 public class Scheduler extends Thread
 {
+	private Vector[] queues;
     private Vector queue;	// List of active threads (TCBs)
+    // Additional queues for part 2
+    private Vector queueB;
+    private Vector queueC;
+    
     private int timeSlice;	// Time slice allocated to each user thread execution
     private static final int DEFAULT_TIME_SLICE = 1000; // 1 second
+    // Quanta for queues
+    private int quantumA;
+    private int quantumB;
+    private int quantumC; 
 
     // New data added to p161
     private boolean[] tids; // Indicate which ids have been used
@@ -114,9 +123,10 @@ public class Scheduler extends Thread
     // ************************************************************************
     public Scheduler( ) 
     {
-        timeSlice = DEFAULT_TIME_SLICE;
-        queue = new Vector( );
-        initTid( DEFAULT_MAX_THREADS );
+    	// Use:
+    	// this(param1, param2, ..., paramN);
+    	this(DEFAULT_TIME_SLICE, DEFAULT_MAX_THREADS);
+    	
     }
 
     // ************************************************************************
@@ -124,9 +134,10 @@ public class Scheduler extends Thread
     // ************************************************************************
     public Scheduler( int quantum ) 
     {
-        timeSlice = quantum;
-        queue = new Vector( );
-        initTid( DEFAULT_MAX_THREADS );
+    	// Use:
+    	// this(param1, param2, ..., paramN);
+    	this(quantum, DEFAULT_MAX_THREADS);
+    	
     }
 
     // ************************************************************************
@@ -138,8 +149,17 @@ public class Scheduler extends Thread
     // max number of threads to be spawned
     public Scheduler( int quantum, int maxThreads ) 
     {
+    	queues = new Vector[3];
+    	for(int i = 0; i < queues.length; i++)
+    	{
+    		queues[i] = new Vector();
+    	}
         timeSlice = quantum;
-        queue = new Vector( );
+        quantumA = timeSlice/2;
+        quantumB = timeSlice;
+        quantumC = timeSlice * 2;
+
+        
         initTid( maxThreads );
     }
 
@@ -255,6 +275,15 @@ public class Scheduler extends Thread
                 schedulerSleep( );
                 // System.out.println("* * * Context Switch * * * ");
 
+                // ***********************************************************
+                // ***************** Modify For Part 2 *********************
+                // ***********************************************************
+                // Should probably use a queues[3] that stores
+                // queueA, queueB, and queueC and then use
+                // syncrhonized( queues )
+                // Then move threads to queueB, C.... Would then 
+                // need to modivy addThread() so that it adds to 
+                // queues[0]
                 synchronized ( queue ) 
                 {
                     if ( current != null && current.isAlive( ) )
