@@ -22,11 +22,11 @@ import java.util.*;
 
 public class Scheduler extends Thread
 {
+	// Array of vectors (one vector per queue)
+	// replaced a single vector for the original
+	// single queue of TCBs
 	private Vector[] queues;
-    private Vector queue;	// List of active threads (TCBs)
-    // Additional queues for part 2
-    private Vector queueB;
-    private Vector queueC;
+	private final int numberOfQueues = 3;
     
     private int timeSlice;	// Time slice allocated to each user thread execution
     private static final int DEFAULT_TIME_SLICE = 1000; // 1 second
@@ -44,6 +44,7 @@ public class Scheduler extends Thread
     // Allocate an ID array, each 
     // element indicating if that id has been used
     private int nextId = 0;
+    
     private void initTid( int maxThreads ) 
     {
         tids = new boolean[maxThreads];
@@ -95,18 +96,22 @@ public class Scheduler extends Thread
     // TCB from the queue
     public TCB getMyTcb( ) {
         Thread myThread = Thread.currentThread( ); // Get my thread object
-        synchronized( queue ) {
-            for ( int i = 0; i < queue.size( ); i++ ) 
-            {
-                TCB tcb = ( TCB )queue.elementAt( i );
-                Thread thread = tcb.getThread( );
-                if ( thread == myThread ) // if this is my TCB, return it
-                {
-                	return tcb;
-                }
-                    
-            }
+        synchronized(queues)
+        {
+        	
         }
+//        synchronized( queue ) {
+//            for ( int i = 0; i < queue.size( ); i++ ) 
+//            {
+//                TCB tcb = ( TCB )queue.elementAt( i );
+//                Thread thread = tcb.getThread( );
+//                if ( thread == myThread ) // if this is my TCB, return it
+//                {
+//                	return tcb;
+//                }
+//                    
+//            }
+//        } // end of synchronized( queue )
         return null;
     }
 
@@ -149,7 +154,7 @@ public class Scheduler extends Thread
     // max number of threads to be spawned
     public Scheduler( int quantum, int maxThreads ) 
     {
-    	queues = new Vector[3];
+    	queues = new Vector[numberOfQueues];
     	for(int i = 0; i < queues.length; i++)
     	{
     		queues[i] = new Vector();
@@ -192,7 +197,8 @@ public class Scheduler extends Thread
         }
             
         TCB tcb = new TCB( t, tid, pid ); // create a new TCB
-        queue.add( tcb );
+        // Adding to queue 0
+        queues[0].add( tcb );
         return tcb;
     }
 
@@ -239,7 +245,12 @@ public class Scheduler extends Thread
     public void run( ) 
     {
         Thread current = null;
+        processQueueZero();
+        processQueueOne();
+        processQueueTwo();
 
+     // ***********************************************************
+        // ************** Original Code start ************************
         //this.setPriority( 6 );	//*********** Removed for part 1
 
         while ( true ) 
@@ -297,5 +308,98 @@ public class Scheduler extends Thread
                 }
             } catch ( NullPointerException e3 ) { };
         }
+        // ************** Original Code end **************************
+        // ***********************************************************
+    }
+                
+    // Processing first queue with 
+    // highest priority TCBs
+    public void processQueueZero()
+    {
+    	Thread currThread = null;
+    	// Will run as long as queue0 has TCBs
+    	while(getLengthOfQueue(0) > 0)
+    	{
+    		try
+    		{
+    			// Getting TCB at front of queue, then getting thread
+    			TCB currTCB = (TCB)queues[0].firstElement();
+    			// Checking if process is terminated, removing if it is
+    			if(currTCB.getTerminated() == true)
+    			{
+    				queues[0].remove(currTCB);
+    				returnTid(currTCB.getTid()); // Freeing tid
+    			}
+    			// Getting current thread to process 
+    			currThread = currTCB.getThread();
+    			if ( currThread != null ) 
+                {
+                    if ( currThread.isAlive( ) )
+                    {
+                    	// Resuming thread execution
+                    	currThread.resume();	// ******* Added for part1
+                    }
+                        
+                    else {
+                        // Spawn must be controlled by Scheduler
+                        // Scheduler must start a new thread
+                        currThread.start( );
+                    }
+                }
+    			// Sleeping for queue0 quantum
+                sleepThread(quantumA);
+                
+                // Will now check if current TCB needs to be bumped into
+                // queue1 or removed from queue0 if it terminates
+                synchronized(queues[0])
+                {
+                	// If still alive, needs to be bumped to
+                	// queue1
+                	if ( currThread != null && currThread.isAlive( ) )
+                	{
+                		// Suspending after quantum time processing
+                		currThread.suspend(); // ***** Added for part1
+                		queues[0].remove( currTCB );// Remove from queue0
+                		queues[1].add(currTCB);		// Adding to queue1
+                		
+                	}
+                	// Else bumping to tail of queue0
+                	queues[0].remove( currTCB ); // rotate this TCB to the end
+                	queues[0].add( currTCB );
+                }
+
+    			
+    			
+    		} catch ( NullPointerException e3 ) { };
+    	}
+    }
+    
+    // Processes second queue
+    public void processQueueOne()
+    {
+    	
+    }
+    
+    // Processes third queue
+    public void processQueueTwo()
+    {
+    	
+    }
+    
+    // Returns the number of queues
+    public int getNumberOfQueues()
+    {
+    	return queues.length;
+    }
+    
+    // Returns the size/length of a specified queue
+    public int getLengthOfQueue(int q) throws IllegalArgumentException
+    {
+    	if(q < 0 || q >= getNumberOfQueues())
+    	{
+    		throw new IllegalArgumentException("Invalid queue number");
+    	}
+    	
+    	return queues[q].size();
     }
 }
