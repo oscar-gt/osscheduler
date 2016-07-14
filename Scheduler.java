@@ -246,8 +246,8 @@ public class Scheduler extends Thread
     {
         Thread current = null;
         processQueueZero();
-        processQueueOne();
-        processQueueTwo();
+        processQueue(1);
+        processQueue(2);
 
      // ***********************************************************
         // ************** Original Code start ************************
@@ -374,16 +374,224 @@ public class Scheduler extends Thread
     	}
     }
     
-    // Processes second queue
+    // Processes second queue, may need to call 
+    // processQueueZero()
     public void processQueueOne()
     {
+    	// Function will take a TCB from queues[1]
+    	// and run for timeslice/2 before checking
+    	// queues[0] to see if there are TCBs to 
+    	// process. 
+    	int segment = 0;	// Quantum is timeslice, and we check 
+    						// queue0 every timeslice/2, so we have
+    						// segments 0, 1
+    	int quantum = 0;
+    	int checkAfter = 0;
+    	int currQ = 1;	// Current queue whose TCBs are being processed
+    	int nextQ = 2;	// TCBs might get bumped to next queue
+    	if(currQ == 0)
+    	{
+    		quantum = timeSlice / 2;
+    		checkAfter = 0;
+    		nextQ = 1;
+    	}
+    	else if(currQ == 1)
+    	{
+    		quantum = timeSlice;
+    		checkAfter = timeSlice / 2;
+    		nextQ = 2;
+    	}
+    	else if(currQ == 2)
+    	{
+    		quantum = timeSlice * 2;
+    		checkAfter = timeSlice / 2;
+    		
+    	}
+    	
+    	
+    	Thread currThread = null;
+    	// Will run as long as queue0 has TCBs
+    	while(getLengthOfQueue(currQ) > 0)
+    	{
+    		try
+    		{
+    			// Getting TCB at front of queue, then getting thread
+    			TCB currTCB = (TCB)queues[currQ].firstElement();
+    			// Checking if process is terminated, removing if it is
+    			if(currTCB.getTerminated() == true)
+    			{
+    				queues[currQ].remove(currTCB);
+    				returnTid(currTCB.getTid()); // Freeing tid
+    			}
+    			// Getting current thread to process 
+    			currThread = currTCB.getThread();
+    			if ( currThread != null ) 
+                {
+                    if ( currThread.isAlive( ) )
+                    {
+                    	// Resuming thread execution
+                    	currThread.resume();	// ******* Added for part1
+                    }
+                        
+                    else {
+                        // Spawn must be controlled by Scheduler
+                        // Scheduler must start a new thread
+                        currThread.start( );
+                    }
+                }
+    			// Sleeping and checking for TCBs in queue0
+    			sleepThread(checkAfter);
+    			segment = segment + 1;
+    			if(queues[currQ - 1].size() > 0)
+    			{
+    				if(currThread != null && currThread.isAlive())
+    				{
+    					currThread.suspend();
+    				}
+    				processQueueZero();
+    			}
+    			
+    			
+                
+                
+                // Will now check if current TCB needs to be bumped into
+                // queue1 or removed from queue0 if it terminates
+                synchronized(queues[currQ])
+                {
+                	// If still alive, needs to be bumped to
+                	// queue1
+                	if ( currThread != null && currThread.isAlive( ) && segment == 2)
+                	{
+                		// Suspending after quantum time processing
+                		currThread.suspend(); // ***** Added for part1
+                		queues[currQ].remove( currTCB );// Remove from queue0
+                		queues[nextQ].add(currTCB);		// Adding to queue1
+                		segment = 0; // Resetting
+                		
+                	}
+                	// Do nothing, leave in current queue 1
+                	
+                }
+
+    			
+    			
+    		} catch ( NullPointerException e3 ) { };
+    	}
     	
     }
     
     // Processes third queue
     public void processQueueTwo()
     {
-    	
+    	// Function will take a TCB from queues[2]
+    	// and run for timeslice/2 before checking
+    	// queues[0] and queues[1] to see if there 
+    	// are TCBs to process. 
+    	int segment = 0;	// Quantum is timeslice, and we check 
+    	// queue0 every timeslice/2, so we have
+    	// segments 0, 1
+    	int quantum = 0;
+    	int checkAfter = 0;
+    	int currQ = 2;	// Current queue whose TCBs are being processed
+    	int nextQ = 2;	// TCBs might get bumped to next queue
+    	if(currQ == 0)
+    	{
+    		quantum = timeSlice / 2;
+    		checkAfter = 0;
+    		nextQ = 1;
+    	}
+    	else if(currQ == 1)
+    	{
+    		quantum = timeSlice;
+    		checkAfter = timeSlice / 2;
+    		nextQ = 2;
+    	}
+    	else if(currQ == 2)
+    	{
+    		quantum = timeSlice * 2;
+    		checkAfter = timeSlice / 2;
+
+    	}
+
+
+    	Thread currThread = null;
+    	// Will run as long as queue0 has TCBs
+    	while(getLengthOfQueue(currQ) > 0)
+    	{
+    		try
+    		{
+    			// Getting TCB at front of queue, then getting thread
+    			TCB currTCB = (TCB)queues[currQ].firstElement();
+    			// Checking if process is terminated, removing if it is
+    			if(currTCB.getTerminated() == true)
+    			{
+    				queues[currQ].remove(currTCB);
+    				returnTid(currTCB.getTid()); // Freeing tid
+    			}
+    			// Getting current thread to process 
+    			currThread = currTCB.getThread();
+    			if ( currThread != null ) 
+    			{
+    				if ( currThread.isAlive( ) )
+    				{
+    					// Resuming thread execution
+    					currThread.resume();	// ******* Added for part1
+    				}
+
+    				else {
+    					// Spawn must be controlled by Scheduler
+    					// Scheduler must start a new thread
+    					currThread.start( );
+    				}
+    			}
+    			// Sleeping and checking for TCBs in queue0, queue1
+    			sleepThread(checkAfter);
+    			segment = segment + 1;
+    			if(queues[0].size() > 0)
+    			{
+    				if(currThread != null && currThread.isAlive())
+    				{
+    					currThread.suspend();
+    				}
+    				processQueueZero();
+    			}
+    			// Checking queue1
+    			if(queues[1].size() > 0)
+    			{
+    				if(currThread != null && currThread.isAlive())
+    				{
+    					currThread.suspend();
+    				}
+    				processQueueOne();
+    			}
+
+
+
+
+    			// Will now check if current TCB needs to be bumped into
+    			// queue1 or removed from queue0 if it terminates
+    			synchronized(queues[currQ])
+    			{
+    				// If still alive, needs to be bumped to
+    				// queue1
+    				if ( currThread != null && currThread.isAlive( ) && segment == 4)
+    				{
+    					// Suspending after quantum time processing
+    					currThread.suspend(); // ***** Added for part1
+    					queues[currQ].remove( currTCB );// Remove from queue2
+    					queues[currQ].add(currTCB);		// Adding to end
+    					segment = 0; // Resetting
+
+    				}
+    				// Do nothing, leave in current queue 2
+
+    			}
+
+
+
+    		} catch ( NullPointerException e3 ) { };
+    	}
+
     }
     
     // Returns the number of queues
