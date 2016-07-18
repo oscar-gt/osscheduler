@@ -1,5 +1,6 @@
 
 
+
 // NOTES: 
 // Don't remove or put additional 
 // "synchronized" keywords in the code
@@ -40,6 +41,8 @@ public class Scheduler extends Thread
     // Allocate an ID array, each 
     // element indicating if that id has been used
     private int nextId = 0;
+    
+    private boolean verbose = true;
     
     private void initTid( int maxThreads ) 
     {
@@ -183,7 +186,7 @@ public class Scheduler extends Thread
     {
         try 
         {
-            Thread.sleep( timeSlice );
+            Thread.sleep( timeSlice/2 ); // *************************** Originally Thread.sleep( timeSlice );
         } 
         catch ( InterruptedException e ) 
         {
@@ -209,7 +212,15 @@ public class Scheduler extends Thread
             
         TCB tcb = new TCB( t, tid, pid ); // create a new TCB
         // Adding to queue 0
-        queues[0].add( tcb );
+        // MODIFIED, returning .add(tcb) to debug
+        boolean added = false;
+        added = queues[0].add( tcb );
+        if(verbose)
+        {
+        	SysLib.cerr("queues[0].add(tcb) returned:  " + added + "\n");
+        }
+        
+        
         return tcb;
     }
 
@@ -255,11 +266,11 @@ public class Scheduler extends Thread
     // A modified run of p161
     public void run( ) 
     {
-    	SysLib.cerr("First line in Scheduler.java run() \n");
-//        Thread current = null;
-//        processQueueZero();
-//        processQueueOne();
-//        processQueueTwo();
+    
+        Thread current = null;
+        processQueueZero();
+        processQueueOne();
+        processQueueTwo();
 
      // ***********************************************************
         // ************** Original Code start ************************
@@ -326,17 +337,53 @@ public class Scheduler extends Thread
      
     }
                 
+    // *****************************	Processing Queue 0		************************************
     // Processing first queue with 
     // highest priority TCBs
     @SuppressWarnings({ "deprecation", "unchecked" })
 	public void processQueueZero()
     {
+    	int count = 0;
+    	if(verbose)
+    	{
+    		SysLib.cerr("start of processQueueZero() \n");
+    	}
+    	
+    	int currQ = 0;
     	Thread currThread = null;
     	// Will run as long as queue0 has TCBs
-    	while(getLengthOfQueue(0) > 0)
+    	while(true) // First had while(getLengthOfQueue(0) > 0)
     	{
     		try
     		{
+    			if ( queues[currQ].size( ) == 0 && queues[currQ + 1].size() > 0)
+    			{
+    				break;
+    			}
+    			else if(queues[currQ].size( ) == 0)
+    			{
+    				if(verbose)
+    				{
+    					SysLib.cerr("queue[0].size() == 0, count == " + count + ", continuing \n");
+    					count = count + 1;
+    					int q2size = queues[1].size();
+        				SysLib.cerr("**//**//**//** queue[1] size == " + q2size + "\n");
+    					
+    				}
+    				continue;
+    			}
+    			else
+    			{
+    				SysLib.cerr("**************************** queue[0].size() == " + queues[currQ].size() + " \n");
+    				
+    			}
+    			
+    			if(verbose)
+    			{
+    				int q2size = queues[1].size();
+    				SysLib.cerr("**//**//**//** queue[1] size == " + q2size + "\n");
+    			}
+                    
     			// Getting TCB at front of queue, then getting thread
     			TCB currTCB = (TCB)queues[0].firstElement();
     			// Checking if process is terminated, removing if it is
@@ -362,11 +409,12 @@ public class Scheduler extends Thread
                     }
                 }
     			// Sleeping for queue0 quantum
-                sleepThread(quantumA);
+                //sleepThread(quantumA);
+    			schedulerSleep();
                 
                 // Will now check if current TCB needs to be bumped into
                 // queue1 or removed from queue0 if it terminates
-                synchronized(queues[0])
+                synchronized(queues[currQ]) // First had synchronized(queues[currQ])
                 {
                 	// If still alive, needs to be bumped to
                 	// queue1
@@ -378,7 +426,7 @@ public class Scheduler extends Thread
                 		queues[1].add(currTCB);		// Adding to queue1
                 		
                 	}
-                	else
+                	else if(currThread != null && !currThread.isAlive())
                 	{
                 		// Else bumping to tail of queue0
                 		queues[0].remove( currTCB ); // rotate this TCB to the end
@@ -390,14 +438,21 @@ public class Scheduler extends Thread
     			
     			
     		} catch ( NullPointerException e3 ) { };
-    	}
-    }
+    	} // End while
+    } // end run()
+    
+    // *****************************	 Processing Queue 1		********************************
     
     // Processes second queue, may need to call 
     // processQueueZero()
     @SuppressWarnings({ "deprecation", "unchecked" })
 	public void processQueueOne()
     {
+    	if(verbose)
+    	{
+    		SysLib.cerr("start of processQueueOne() \n");
+    	}
+    	
     	// Function will take a TCB from queues[1]
     	// and run for timeslice/2 before checking
     	// queues[0] to see if there are TCBs to 
@@ -431,10 +486,19 @@ public class Scheduler extends Thread
     	
     	Thread currThread = null;
     	// Will run as long as queue0 has TCBs
-    	while(getLengthOfQueue(currQ) > 0)
+    	while(true) // first had while(getLengthOfQueue(currQ) > 0)
     	{
     		try
     		{
+    			if ( queues[currQ].size( ) == 0 )
+    			{
+    				if(verbose)
+    				{
+    					SysLib.cerr("queue[1].size() == 0, continuing \n");
+    				}
+    				
+    				continue;
+    			}
     			// Getting TCB at front of queue, then getting thread
     			TCB currTCB = (TCB)queues[currQ].firstElement();
     			// Checking if process is terminated, removing if it is
@@ -460,7 +524,8 @@ public class Scheduler extends Thread
                     }
                 }
     			// Sleeping and checking for TCBs in queue0
-    			sleepThread(checkAfter);
+    			//sleepThread(checkAfter);
+    			schedulerSleep();
     			segment = segment + 1;
     			if(queues[currQ - 1].size() > 0)
     			{
@@ -476,7 +541,7 @@ public class Scheduler extends Thread
                 
                 // Will now check if current TCB needs to be bumped into
                 // queue1 or removed from queue0 if it terminates
-                synchronized(queues[currQ])
+                synchronized(queues) // First had synchronized(queues[currQ])
                 {
                 	// If still alive, needs to be bumped to
                 	// queue1
@@ -500,10 +565,18 @@ public class Scheduler extends Thread
     	
     }
     
+    
+    // *****************************	Processing Queue 2		************************************
+    
     // Processes third queue
     @SuppressWarnings({ "deprecation", "unchecked" })
 	public void processQueueTwo()
     {
+    	if(verbose)
+    	{
+    		SysLib.cerr("start of processQueueTwo() \n");
+    	}
+    	
     	// Function will take a TCB from queues[2]
     	// and run for timeslice/2 before checking
     	// queues[0] and queues[1] to see if there 
@@ -538,10 +611,18 @@ public class Scheduler extends Thread
 
     	Thread currThread = null;
     	// Will run as long as queue0 has TCBs
-    	while(getLengthOfQueue(currQ) > 0)
+    	while(true) // First had while(getLengthOfQueue(currQ) > 0)
     	{
     		try
     		{
+    			if ( queues[currQ].size( ) == 0 )
+    			{
+    				if(verbose)
+    				{
+    					SysLib.cerr("queue[2].size() == 0, continuing \n");
+    				}
+    				continue;
+    			}
     			// Getting TCB at front of queue, then getting thread
     			TCB currTCB = (TCB)queues[currQ].firstElement();
     			// Checking if process is terminated, removing if it is
@@ -567,7 +648,8 @@ public class Scheduler extends Thread
     				}
     			}
     			// Sleeping and checking for TCBs in queue0, queue1
-    			sleepThread(checkAfter);
+    			//sleepThread(checkAfter);
+    			schedulerSleep();
     			segment = segment + 1;
     			if(queues[0].size() > 0)
     			{
@@ -584,6 +666,10 @@ public class Scheduler extends Thread
     				{
     					currThread.suspend();
     				}
+    				if(verbose)
+    				{
+    					SysLib.cerr("calling processQueueOne() from processQueueTwo() \n");
+    				}
     				processQueueOne();
     			}
 
@@ -592,7 +678,7 @@ public class Scheduler extends Thread
 
     			// Will now check if current TCB needs to be bumped into
     			// queue1 or removed from queue0 if it terminates
-    			synchronized(queues[currQ])
+    			synchronized(queues) // First had synchronized(queues[currQ])
     			{
     				// If still alive, needs to be bumped to
     				// queue1
@@ -632,4 +718,7 @@ public class Scheduler extends Thread
     	
     	return queues[q].size();
     }
+    
+    // Returns true of there are TCBs in queues in lower priority
+    
 }
