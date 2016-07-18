@@ -490,13 +490,17 @@ public class Scheduler extends Thread
     	{
     		try
     		{
-    			if ( queues[currQ].size( ) == 0 )
+    			if ( queues[currQ].size( ) == 0 && queues[currQ + 1].size() > 0)
+    			{
+    				break;
+    			}
+    			else if(queues[currQ].size( ) == 0)
     			{
     				if(verbose)
     				{
     					SysLib.cerr("queue[1].size() == 0, continuing \n");
     				}
-    				
+
     				continue;
     			}
     			// Getting TCB at front of queue, then getting thread
