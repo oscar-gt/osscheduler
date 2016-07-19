@@ -1,10 +1,7 @@
-
-
-
-// NOTES: 
-// Don't remove or put additional 
-// "synchronized" keywords in the code
-// or else deadlock may occur
+// Oscar Garcia-Telles
+// CSS 430 Lab 2
+// Scheduler.java
+// 13 July 2016
 
 // THIS IS THE CODE FOR PART 2!!!!
 // Modify the following:
@@ -12,8 +9,6 @@
 // --- run()
 // --- getMyTcb()
 // --- addThread()
-
-// 
 
 import java.util.*;
 
@@ -27,10 +22,6 @@ public class Scheduler extends Thread
     
     private int timeSlice;	// Time slice allocated to each user thread execution
     private static final int DEFAULT_TIME_SLICE = 1000; // 1 second
-    // Quanta for queues
-    private int quantumA;
-    private int quantumB;
-    private int quantumC; 
 
     // New data added to p161
     private boolean[] tids; // Indicate which ids have been used
@@ -42,6 +33,7 @@ public class Scheduler extends Thread
     // element indicating if that id has been used
     private int nextId = 0;
     
+    // Only used for debugging
     private boolean verbose = false;
     
     private void initTid( int maxThreads ) 
@@ -84,9 +76,7 @@ public class Scheduler extends Thread
         return false;
     }
 
-    // ********************************************************************
-    // ******************* Modify getMyTcb() For Part 2 ******************
-    // ********************************************************************
+    // ******************* Modified getMyTcb() For Part 2 ******************
     // This method must look through 
     // all 3 queues: Q0,Q1,Q2
     
@@ -113,18 +103,7 @@ public class Scheduler extends Thread
         		}
         	}
         }
-//        synchronized( queue ) {
-//            for ( int i = 0; i < queue.size( ); i++ ) 
-//            {
-//                TCB tcb = ( TCB )queue.elementAt( i );
-//                Thread thread = tcb.getThread( );
-//                if ( thread == myThread ) // if this is my TCB, return it
-//                {
-//                	return tcb;
-//                }
-//                    
-//            }
-//        } // end of synchronized( queue )
+
         return null;
     }
 
@@ -136,9 +115,7 @@ public class Scheduler extends Thread
         return tids.length;
     }
 
-    // ************************************************************************
-    // ******************* Modify Constructor For Part 2 ****************
-    // ************************************************************************
+    // ******************* Modified Constructor For Part 2 ****************
     public Scheduler( ) 
     {
     	// Use:
@@ -147,9 +124,7 @@ public class Scheduler extends Thread
     	
     }
 
-    // ************************************************************************
-    // ******************* Modify Constructor For Part 2 ****************
-    // ************************************************************************
+    // ******************* Modified Constructor For Part 2 ****************
     public Scheduler( int quantum ) 
     {
     	// Use:
@@ -158,10 +133,7 @@ public class Scheduler extends Thread
     	
     }
 
-    // ************************************************************************
-    // ******************* Modify Constructor For Part 2 ****************
-    // ************************************************************************
-    
+    // ******************* Modified Constructor For Part 2 ****************
     // A new feature added to p161
     // A constructor to receive the 
     // max number of threads to be spawned
@@ -172,36 +144,31 @@ public class Scheduler extends Thread
     	{
     		queues[i] = new Vector<TCB>();
     	}
-        timeSlice = quantum;
-        quantumA = timeSlice/2;
-        quantumB = timeSlice;
-        quantumC = timeSlice * 2;
-
-        
+        timeSlice = quantum;      
         initTid( maxThreads );
     }
 
+    // ********************** Modified schedulerSleep() for part 2 **************
+    // Since we always check for TCBs of a higher priority
+    // after timeslice/2, the sleep time was chaged to 
+    // this value. 
     @SuppressWarnings("unused")
 	private void schedulerSleep( ) 
     {
         try 
         {
-            Thread.sleep( timeSlice/2 ); // *************************** Originally Thread.sleep( timeSlice );
+            Thread.sleep( timeSlice/2 );
         } 
         catch ( InterruptedException e ) 
         {
         }
     }
 
-    // ************************************************************************
-    // ******************* Modify addThread() For Part 2 ****************
-    // ************************************************************************
-    // Should add thread to Q0
-    
+    // ******************* Modified addThread() For Part 2 ****************
+    // Call to method should add threads to Q0 
     // A modified addThread of p161 example
 	public TCB addThread( Thread t ) 
     {
-        //t.setPriority( 2 );	// ********************** Removed for part 1
         TCB parentTcb = getMyTcb( ); // get my TCB and find my TID
         int pid = ( parentTcb != null ) ? parentTcb.getTid( ) : -1;
         int tid = getNewTid( ); // get a new TID
@@ -242,9 +209,8 @@ public class Scheduler extends Thread
         } catch ( InterruptedException e ) { }
     }
 
-    // ************************************************************************
-    // ******************* Modify run() For Part 2 ****************
-    // ************************************************************************
+    // ******************* Modified run() For Part 2 ****************
+
     // Should implement the following algorithm:
     // Execute threads in Q0
     // 		if thread in Q0 doesn't complete
@@ -254,7 +220,7 @@ public class Scheduler extends Thread
     //		in timeslice/2, check Q0 for 
     // 		threads and execute Q0 threads
     //		after pausing Q1 thread exec. 
-    //		If Q1 thread doesn't execute
+    //		If Q1 thread doesn't terminate
     // 		in timeslice, move to Q2
     // If Q0, Q1 are empty, execute Q2 threads
     // 		after timeslice/2, check Q0,Q1 for
@@ -266,14 +232,14 @@ public class Scheduler extends Thread
     // A modified run of p161
     public void run( ) 
     {
-    
-        Thread current = null;
+    	// Note: I was originally trying to implement a single method that
+    	// processes all queues in run(), but I couldn't correctly implement
+    	// it right away. Therefore, I broke it up into 3 methods in a manner
+    	// that made sense to me. 
         processQueueZero();
         processQueueOne();
         processQueueTwo();
-      
-        
-     
+
     }
                 
     // *****************************	Processing Queue 0		************************************
@@ -282,7 +248,7 @@ public class Scheduler extends Thread
     @SuppressWarnings({ "deprecation", "unchecked" })
 	public void processQueueZero()
     {
-    	int count = 0;
+    	// For debugging
     	if(verbose)
     	{
     		int q0, q1, q2;
@@ -293,13 +259,15 @@ public class Scheduler extends Thread
     		SysLib.cerr("... q0 size = " + q0 + ", q1 size = " + q1 + ", q2 size = " + q2 + " \n");
     	}
     	
-    	int currQ = 0;
+    	int currQ = 0;	// Current queue is 0
     	Thread currThread = null;
     	// Will run as long as queue0 has TCBs
     	while(true) // First had while(getLengthOfQueue(0) > 0)
     	{
     		try
     		{
+    			// Will exit if current queue is empty but next queue
+    			// of lower priority has TCB's to process.
     			if ( queues[currQ].size( ) == 0 && queues[currQ + 1].size() > 0)
     			{
     				if(verbose)
@@ -313,8 +281,7 @@ public class Scheduler extends Thread
     			{
     				if(verbose)
     				{
-    					SysLib.cerr("queue[0].size() == 0, count == " + count + ", continuing \n");
-    					count = count + 1;
+    					SysLib.cerr("queue[0].size() == 0 \n");
     					int q2size = queues[1].size();
         				SysLib.cerr("**//**//**//** queue[1] size == " + q2size + "\n");
     					
@@ -348,7 +315,7 @@ public class Scheduler extends Thread
                     if ( currThread.isAlive( ) )
                     {
                     	// Resuming thread execution
-                    	currThread.resume();	// ******* Added for part1
+                    	currThread.resume();	
                     }
                         
                     else {
@@ -357,7 +324,7 @@ public class Scheduler extends Thread
                         currThread.start( );
                     }
                 }
-    			// Sleeping for queue0 quantum
+    			// Sleeping for timeslice/2
                 //sleepThread(quantumA);
     			schedulerSleep();
                 
@@ -365,8 +332,8 @@ public class Scheduler extends Thread
                 // queue1 or removed from queue0 if it terminates
                 synchronized(queues[currQ]) // First had synchronized(queues[currQ])
                 {
-                	// If still alive, needs to be bumped to
-                	// queue1
+                	// Checking if TCB has been terminated so
+                	// that we can remove it from the queue
                 	boolean term = currTCB.getTerminated();
                 	if(term)
                 	{
@@ -374,9 +341,11 @@ public class Scheduler extends Thread
                 		{
                 			SysLib.cerr("Removing currTCB from queue[0] since it's terminated \n");
                 		}
-                		
+                		// Removing
                 		queues[currQ].remove(currTCB);
                 	}
+                	// If still alive, needs to be bumped to
+                	// queue1
                 	else if ( currThread != null && currThread.isAlive( ) )
                 	{
                 		// Suspending after quantum time processing
@@ -387,22 +356,16 @@ public class Scheduler extends Thread
                 	}
                 	else if(currThread != null && !currThread.isAlive())
                 	{
-//                		// Else bumping to tail of queue0
-//                		SysLib.cerr("processQueueZero() bumping to end of queue0, thread not null, not alive \n");
-//                		SysLib.cerr("..... TCB tid is " + currTCB.getTid() + "\n");
-//                		queues[0].remove( currTCB ); // rotate this TCB to the end
-//                		queues[0].add( currTCB );
+
                 		// Modification to commented code above: removing if not null and dead (not alive)
                 		queues[currQ].remove(currTCB);
                 	}
                 	
-                }
-
-    			
-    			
+                }	
     		} catch ( NullPointerException e3 ) { };
     	} // End while
-    } // end run()
+    } // end processQueueZero()
+    
     
     // *****************************	 Processing Queue 1		********************************
     
@@ -411,6 +374,7 @@ public class Scheduler extends Thread
     @SuppressWarnings({ "deprecation", "unchecked" })
 	public void processQueueOne()
     {
+    	// for debugging
     	if(verbose)
     	{
     		int q0, q1, q2;
@@ -425,39 +389,23 @@ public class Scheduler extends Thread
     	// and run for timeslice/2 before checking
     	// queues[0] to see if there are TCBs to 
     	// process. 
+    	
     	int segment = 0;	// Quantum is timeslice, and we check 
     						// queue0 every timeslice/2, so we have
-    						// segments 0, 1
-    	int quantum = 0;
-    	int checkAfter = 0;
+    						// segments 1,2
+    	int lastSegment = 2;	// Used to see if we need to bump TCB to queue 2
+    	
     	int currQ = 1;	// Current queue whose TCBs are being processed
     	int nextQ = 2;	// TCBs might get bumped to next queue
-    	if(currQ == 0)
-    	{
-    		quantum = timeSlice / 2;
-    		checkAfter = 0;
-    		nextQ = 1;
-    	}
-    	else if(currQ == 1)
-    	{
-    		quantum = timeSlice;
-    		checkAfter = timeSlice / 2;
-    		nextQ = 2;
-    	}
-    	else if(currQ == 2)
-    	{
-    		quantum = timeSlice * 2;
-    		checkAfter = timeSlice / 2;
-    		
-    	}
-    	
-    	
+	
     	Thread currThread = null;
     	// Will run as long as queue0 has TCBs
     	while(true) // first had while(getLengthOfQueue(currQ) > 0)
     	{
     		try
     		{
+    			// Checking of current queue is empty and next queue 
+    			// with lower priority queues has TCBs to process
     			if ( queues[currQ].size( ) == 0 && queues[currQ + 1].size() > 0)
     			{
     				if(verbose)
@@ -467,6 +415,8 @@ public class Scheduler extends Thread
     				
     				break;
     			}
+    			// Else current and next queue of lower priority
+    			// is also empty, so active waiting.
     			else if(queues[currQ].size( ) == 0)
     			{
     				if(verbose)
@@ -477,6 +427,7 @@ public class Scheduler extends Thread
     				continue;
     			}
     			
+    			// For debugging
     			if(verbose)
     			{
     				int q0 = queues[0].size();
@@ -492,15 +443,12 @@ public class Scheduler extends Thread
     			}
     			// Getting current thread to process 
     			currThread = currTCB.getThread();
-//    			// ****************************************  Checking if terminated **********************************
-//    			boolean term = currTCB.getTerminated();
-//    			SysLib.cerr("processQueueOne(), currTCB.getTerminated() == " + term + "\n");
     			if ( currThread != null ) 
                 {
                     if ( currThread.isAlive( ) )
                     {
                     	// Resuming thread execution
-                    	currThread.resume();	// ******* Added for part1
+                    	currThread.resume();	
                     }
                         
                     else {
@@ -513,30 +461,31 @@ public class Scheduler extends Thread
     			//sleepThread(checkAfter);
     			schedulerSleep();
     			segment = segment + 1;
+    			// Checking of queue of higher priority, 
+    			// queue0, has TCBs. If it does, we'll
+    			// suspend current thread to process
+    			// queue0
     			if(queues[currQ - 1].size() > 0)
     			{
     				if(currThread != null && currThread.isAlive())
     				{
-    					currThread.suspend();
+    					currThread.suspend(); // pausing
     				}
     				if(verbose)
     				{
     					SysLib.cerr("suspending thread in processQueueOne() to exec processQueueZero() \n");
     				}
-    				
+    				// Processing TCBs in queue0
     				processQueueZero();
     			}
     			
-    			
-                
-                
                 // Will now check if current TCB needs to be bumped into
                 // queue1 or removed from queue0 if it terminates
                 synchronized(queues[currQ]) // First had synchronized(queues[currQ])
                 {
                 	// If still alive, needs to be bumped to
-                	// queue1
-                	if ( currThread != null && currThread.isAlive( ) && segment == 2)
+                	// queue2
+                	if ( currThread != null && currThread.isAlive( ) && segment == lastSegment)
                 	{
                 		// Suspending after quantum time processing
                 		currThread.suspend(); // ***** Added for part1
@@ -565,13 +514,8 @@ public class Scheduler extends Thread
                 		
                 		queues[currQ].remove(currTCB);
                 		segment = 0;
-                	}
-                	// Do nothing, leave in current queue 1
-                	
-                }
-
-    			
-    			
+                	}                	
+                }	
     		} catch ( NullPointerException e3 ) { };
     	}
     	
@@ -579,11 +523,14 @@ public class Scheduler extends Thread
     
     
     // *****************************	Processing Queue 2		************************************
-    
-    // Processes third queue
+    // This method will process the TCBs in queue 2 and check for 
+    // TCBs in higher priority queues 0, 1, and process those
+    // before resuming current thread.
+
     @SuppressWarnings({ "deprecation", "unchecked" })
 	public void processQueueTwo()
     {
+    	// For debugging
     	if(verbose)
     	{
     		int q0, q1, q2;
@@ -599,32 +546,11 @@ public class Scheduler extends Thread
     	// queues[0] and queues[1] to see if there 
     	// are TCBs to process. 
     	int segment = 0;	// Quantum is timeslice * 2, and we check 
-    	// queue0 every timeslice/2, so we have
-    	// segments 0, 1, 2, 3
+    						// queue0 every timeslice/2, so we have
+    						// segments 1, 2, 3, 4.
     	int lastSegment = 4;
-    	int quantum = 0;
-    	int checkAfter = 0;
     	int currQ = 2;	// Current queue whose TCBs are being processed
-    	int nextQ = 2;	// TCBs might get bumped to next queue
-    	if(currQ == 0)
-    	{
-    		quantum = timeSlice / 2;
-    		checkAfter = 0;
-    		nextQ = 1;
-    	}
-    	else if(currQ == 1)
-    	{
-    		quantum = timeSlice;
-    		checkAfter = timeSlice / 2;
-    		nextQ = 2;
-    	}
-    	else if(currQ == 2)
-    	{
-    		quantum = timeSlice * 2;
-    		checkAfter = timeSlice / 2;
-
-    	}
-
+    	int nextQ = 2;	// TCBs bumped to end of current vector
 
     	Thread currThread = null;
     	// Will run as long as queue0 has TCBs
@@ -641,13 +567,6 @@ public class Scheduler extends Thread
     				continue;
     			}
     			
-//    			if(verbose)
-//    			{
-//    				int q0 = queues[0].size();
-//    				int q1 = queues[1].size();
-//    				SysLib.cerr("queue[0].size() == " + q0 + ", queue[1].size() == " + q1 + "\n");
-//    			}
-    			
     			// Getting TCB at front of queue, then getting thread
     			TCB currTCB = (TCB)queues[currQ].firstElement();
     			// Checking if process is terminated, removing if it is
@@ -663,7 +582,7 @@ public class Scheduler extends Thread
     				if ( currThread.isAlive( ) )
     				{
     					// Resuming thread execution
-    					currThread.resume();	// ******* Added for part1
+    					currThread.resume();	
     				}
 
     				else {
@@ -708,11 +627,8 @@ public class Scheduler extends Thread
     				
     			}
 
-
-
-
-    			// Will now check if current TCB needs to be bumped into
-    			// queue1 or removed from queue0 if it terminates
+    			// Will now check if current TCB needs to be moved
+    			// to the tail of the current queue
     			synchronized(queues[currQ]) // First had synchronized(queues[currQ])
     			{
     				// If still alive, needs to be bumped to
@@ -723,7 +639,7 @@ public class Scheduler extends Thread
     					currThread.suspend(); // ***** Added for part1
     					queues[currQ].remove( currTCB );// Remove from queue2
     					queues[currQ].add(currTCB);		// Adding to end
-    					segment = 0; // Resetting
+    					segment = 0; // Resetting for next TCB
 
     				}
     				// Checking if current TCB has been terminated
@@ -736,13 +652,9 @@ public class Scheduler extends Thread
     						SysLib.cerr("Removing from queue2 since current TCB has been terminated \n");
     					}
     					queues[currQ].remove(currTCB);
-    					segment = 0;
+    					segment = 0; // Resetting for next TCB
     				}
-    				// Do nothing, leave in current queue 2
-
     			}
-
-
 
     		} catch ( NullPointerException e3 ) { };
     	}
@@ -764,8 +676,5 @@ public class Scheduler extends Thread
     	}
     	
     	return queues[q].size();
-    }
-    
-    // Returns true of there are TCBs in queues in lower priority
-    
+    }   
 }
