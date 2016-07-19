@@ -42,7 +42,7 @@ public class Scheduler extends Thread
     // element indicating if that id has been used
     private int nextId = 0;
     
-    private boolean verbose = true;
+    private boolean verbose = false;
     
     private void initTid( int maxThreads ) 
     {
@@ -271,68 +271,7 @@ public class Scheduler extends Thread
         processQueueZero();
         processQueueOne();
         processQueueTwo();
-
-     // ***********************************************************
-        // ************** Original Code start ************************
-        //this.setPriority( 6 );	//*********** Removed for part 1
-
-//        while ( true ) 
-//        {
-//            try {
-//                // get the next TCB and its thrad
-//                if ( queue.size( ) == 0 )
-//                    continue;
-//                TCB currentTCB = (TCB)queue.firstElement( );
-//                if ( currentTCB.getTerminated( ) == true ) 
-//                {
-//                    queue.remove( currentTCB );
-//                    returnTid( currentTCB.getTid( ) );
-//                    continue;
-//                }
-//                current = currentTCB.getThread( );
-//                if ( current != null ) 
-//                {
-//                    if ( current.isAlive( ) )
-//                    {
-//                    	//current.setPriority( 4 ) // Removed for part1
-//                    	current.resume();	// ******* Added for part1
-//                    }
-//                        
-//                    else {
-//                        // Spawn must be controlled by Scheduler
-//                        // Scheduler must start a new thread
-//                        current.start( );
-//                        //current.setPriority( 4 ); // **** Removed for part1
-//                    }
-//                }
-//
-//                schedulerSleep( );
-//                // System.out.println("* * * Context Switch * * * ");
-//
-//                // ***********************************************************
-//                // ***************** Modify For Part 2 *********************
-//                // ***********************************************************
-//                // Should probably use a queues[3] that stores
-//                // queueA, queueB, and queueC and then use
-//                // syncrhonized( queues )
-//                // Then move threads to queueB, C.... Would then 
-//                // need to modivy addThread() so that it adds to 
-//                // queues[0]
-//                synchronized ( queue ) 
-//                {
-//                    if ( current != null && current.isAlive( ) )
-//                    {
-//                    	//current.setPriority( 2 ); // **Removed for part1
-//                    	current.suspend(); // ***** Added for part1
-//                    }
-//                        
-//                    queue.remove( currentTCB ); // rotate this TCB to the end
-//                    queue.add( currentTCB );
-//                }
-//            } catch ( NullPointerException e3 ) { };
-//        }
-        // ************** Original Code end **************************
-        // ***********************************************************
+      
         
      
     }
@@ -346,7 +285,12 @@ public class Scheduler extends Thread
     	int count = 0;
     	if(verbose)
     	{
+    		int q0, q1, q2;
+    		q0 = queues[0].size();
+    		q1 = queues[1].size();
+    		q2 = queues[2].size();
     		SysLib.cerr("start of processQueueZero() \n");
+    		SysLib.cerr("... q0 size = " + q0 + ", q1 size = " + q1 + ", q2 size = " + q2 + " \n");
     	}
     	
     	int currQ = 0;
@@ -358,6 +302,11 @@ public class Scheduler extends Thread
     		{
     			if ( queues[currQ].size( ) == 0 && queues[currQ + 1].size() > 0)
     			{
+    				if(verbose)
+    				{
+    					SysLib.cerr("Breaking from processQueueZero() \n");
+    				}
+    				
     				break;
     			}
     			else if(queues[currQ].size( ) == 0)
@@ -372,7 +321,7 @@ public class Scheduler extends Thread
     				}
     				continue;
     			}
-    			else
+    			else if(verbose)
     			{
     				SysLib.cerr("**************************** queue[0].size() == " + queues[currQ].size() + " \n");
     				
@@ -418,7 +367,17 @@ public class Scheduler extends Thread
                 {
                 	// If still alive, needs to be bumped to
                 	// queue1
-                	if ( currThread != null && currThread.isAlive( ) )
+                	boolean term = currTCB.getTerminated();
+                	if(term)
+                	{
+                		if(verbose)
+                		{
+                			SysLib.cerr("Removing currTCB from queue[0] since it's terminated \n");
+                		}
+                		
+                		queues[currQ].remove(currTCB);
+                	}
+                	else if ( currThread != null && currThread.isAlive( ) )
                 	{
                 		// Suspending after quantum time processing
                 		currThread.suspend(); // ***** Added for part1
@@ -428,9 +387,13 @@ public class Scheduler extends Thread
                 	}
                 	else if(currThread != null && !currThread.isAlive())
                 	{
-                		// Else bumping to tail of queue0
-                		queues[0].remove( currTCB ); // rotate this TCB to the end
-                		queues[0].add( currTCB );
+//                		// Else bumping to tail of queue0
+//                		SysLib.cerr("processQueueZero() bumping to end of queue0, thread not null, not alive \n");
+//                		SysLib.cerr("..... TCB tid is " + currTCB.getTid() + "\n");
+//                		queues[0].remove( currTCB ); // rotate this TCB to the end
+//                		queues[0].add( currTCB );
+                		// Modification to commented code above: removing if not null and dead (not alive)
+                		queues[currQ].remove(currTCB);
                 	}
                 	
                 }
@@ -450,7 +413,12 @@ public class Scheduler extends Thread
     {
     	if(verbose)
     	{
+    		int q0, q1, q2;
+    		q0 = queues[0].size();
+    		q1 = queues[1].size();
+    		q2 = queues[2].size();
     		SysLib.cerr("start of processQueueOne() \n");
+    		SysLib.cerr("... q0 size = " + q0 + ", q1 size = " + q1 + ", q2 size = " + q2 + " \n");
     	}
     	
     	// Function will take a TCB from queues[1]
@@ -492,6 +460,11 @@ public class Scheduler extends Thread
     		{
     			if ( queues[currQ].size( ) == 0 && queues[currQ + 1].size() > 0)
     			{
+    				if(verbose)
+    				{
+    					SysLib.cerr("Breaking from processQueueOne() \n");
+    				}
+    				
     				break;
     			}
     			else if(queues[currQ].size( ) == 0)
@@ -503,6 +476,12 @@ public class Scheduler extends Thread
 
     				continue;
     			}
+    			
+    			if(verbose)
+    			{
+    				int q0 = queues[0].size();
+    				SysLib.cerr("queue[0].size() == " + q0 + "\n");
+    			}
     			// Getting TCB at front of queue, then getting thread
     			TCB currTCB = (TCB)queues[currQ].firstElement();
     			// Checking if process is terminated, removing if it is
@@ -513,6 +492,9 @@ public class Scheduler extends Thread
     			}
     			// Getting current thread to process 
     			currThread = currTCB.getThread();
+//    			// ****************************************  Checking if terminated **********************************
+//    			boolean term = currTCB.getTerminated();
+//    			SysLib.cerr("processQueueOne(), currTCB.getTerminated() == " + term + "\n");
     			if ( currThread != null ) 
                 {
                     if ( currThread.isAlive( ) )
@@ -537,6 +519,11 @@ public class Scheduler extends Thread
     				{
     					currThread.suspend();
     				}
+    				if(verbose)
+    				{
+    					SysLib.cerr("suspending thread in processQueueOne() to exec processQueueZero() \n");
+    				}
+    				
     				processQueueZero();
     			}
     			
@@ -545,7 +532,7 @@ public class Scheduler extends Thread
                 
                 // Will now check if current TCB needs to be bumped into
                 // queue1 or removed from queue0 if it terminates
-                synchronized(queues) // First had synchronized(queues[currQ])
+                synchronized(queues[currQ]) // First had synchronized(queues[currQ])
                 {
                 	// If still alive, needs to be bumped to
                 	// queue1
@@ -557,6 +544,27 @@ public class Scheduler extends Thread
                 		queues[nextQ].add(currTCB);		// Adding to queue1
                 		segment = 0; // Resetting
                 		
+                	}
+                	else if(currThread != null && currThread.isAlive() )
+                	{
+                		if(verbose)
+                		{
+                			SysLib.cerr("processQueueOne(), thread is not null and alive, segment = " + segment + "\n");
+                		}
+                		
+                	}
+                	
+                	// Checking if TCB has been terminated so we can remove it
+                	boolean term = currTCB.getTerminated();
+                	if(term)
+                	{
+                		if(verbose)
+                		{
+                			SysLib.cerr("Removing from queue1 since TCB is terminated \n");
+                		}
+                		
+                		queues[currQ].remove(currTCB);
+                		segment = 0;
                 	}
                 	// Do nothing, leave in current queue 1
                 	
@@ -578,7 +586,12 @@ public class Scheduler extends Thread
     {
     	if(verbose)
     	{
+    		int q0, q1, q2;
+    		q0 = queues[0].size();
+    		q1 = queues[1].size();
+    		q2 = queues[2].size();
     		SysLib.cerr("start of processQueueTwo() \n");
+    		SysLib.cerr("... q0 size = " + q0 + ", q1 size = " + q1 + ", q2 size = " + q2 + " \n");
     	}
     	
     	// Function will take a TCB from queues[2]
@@ -627,6 +640,14 @@ public class Scheduler extends Thread
     				}
     				continue;
     			}
+    			
+//    			if(verbose)
+//    			{
+//    				int q0 = queues[0].size();
+//    				int q1 = queues[1].size();
+//    				SysLib.cerr("queue[0].size() == " + q0 + ", queue[1].size() == " + q1 + "\n");
+//    			}
+    			
     			// Getting TCB at front of queue, then getting thread
     			TCB currTCB = (TCB)queues[currQ].firstElement();
     			// Checking if process is terminated, removing if it is
@@ -662,6 +683,11 @@ public class Scheduler extends Thread
     					currThread.suspend();
     				}
     				processQueueZero();
+    				if(verbose)
+    				{
+    					SysLib.cerr("*** RESUMING *** processQueueTwo() after calling processQueueZero() \n");
+    				}
+    				
     			}
     			// Checking queue1
     			if(queues[1].size() > 0)
@@ -675,6 +701,11 @@ public class Scheduler extends Thread
     					SysLib.cerr("calling processQueueOne() from processQueueTwo() \n");
     				}
     				processQueueOne();
+    				if(verbose)
+    				{
+    					SysLib.cerr("*** RESUMING *** processQueueTwo() after calling processQueueOne() \n");
+    				}
+    				
     			}
 
 
@@ -682,7 +713,7 @@ public class Scheduler extends Thread
 
     			// Will now check if current TCB needs to be bumped into
     			// queue1 or removed from queue0 if it terminates
-    			synchronized(queues) // First had synchronized(queues[currQ])
+    			synchronized(queues[currQ]) // First had synchronized(queues[currQ])
     			{
     				// If still alive, needs to be bumped to
     				// queue1
@@ -694,6 +725,18 @@ public class Scheduler extends Thread
     					queues[currQ].add(currTCB);		// Adding to end
     					segment = 0; // Resetting
 
+    				}
+    				// Checking if current TCB has been terminated
+    				// so that we can remove it from the current queue.
+    				boolean term = currTCB.getTerminated();
+    				if(term)
+    				{
+    					if(verbose)
+    					{
+    						SysLib.cerr("Removing from queue2 since current TCB has been terminated \n");
+    					}
+    					queues[currQ].remove(currTCB);
+    					segment = 0;
     				}
     				// Do nothing, leave in current queue 2
 
